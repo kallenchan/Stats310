@@ -60,7 +60,7 @@ ggplotly(p)
 #Total Use as Bubble Size
 p<-mdsPowerDist.df%>%
   mutate(TotalUse=round(TotalUse,4))%>%
-  ggplot(aes(x=Y1,y=Y2,color=Group,size=TotalUse,label=ACornCategory))+
+  ggplot(aes(x=Y1,y=Y2,color=Group,label=ACornCategory))+
   geom_point(shape=1,fill="grey",aes(size=TotalUse))+
   scale_size_continuous(range=c(10,40),trans="exp")+
   labs(title="Bubble Plot")
@@ -69,12 +69,14 @@ ggplotly(p)
 ```
 ```{r}
 colors=AcornInfo$Group
+
 colors[colors=="Affluent"]="Green"
-colors[colors=="Comfortable"]="Purple"
+colors[colors=="Comfortable"]="Blue"
 colors[colors=="Adversity"]="Red"
+colors
 symbols(mdsPowerDist$points,circles=AcornInfo$TotalUse,fg=colors,
         main="Principal Coordinates of pairwise distances by Group sized by Total Use")
-
+colors
 ```
 
 
