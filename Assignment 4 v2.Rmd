@@ -1,0 +1,132 @@
+
+```{r Libraries}
+library(MASS)
+library(tidyverse)
+library(plotly)
+library(ggalt)
+install.packages("vegan")
+library(vegan)
+```
+
+```{r Import Data}
+AcornInfo<-read_csv("AcornInfo-1.csv")
+
+comfortable<-read_csv("comfortable.csv")
+pd<-load("powerDist.RData")
+
+
+```
+
+Q1. Create a metric multdimensional scaling. Plot using symbols/colors to represent Tariff and Group (the 3-level variable aggregating the acorn categories). Make a second plot showing total use as bubble size, using color to represent Group. Summarize any trends or interesting features in these two plots.
+
+```{r Q1}
+?mMDS
+#Multi-Dimensional Scaling
+mdsPowerDist<-cmdscale(powerDist,k=2,eig=TRUE)
+
+mdsPowerDist.df<-data.frame(mdsPowerDist$points)%>%
+                    select(Y1=X1,Y2=X2)
+
+mdsPowerDist.df$Tariff_Group <- rownames(mdsPowerDist.df)
+
+mdsPowerDist.df$Tariff<-rownames(mdsPowerDist.df)%>%word(2)
+
+mdsPowerDist.df$ACornCategory<-word(rownames(mdsPowerDist.df,1))
+
+#Join with AcornInfo
+mdsPowerDist.df<-inner_join(x=mdsPowerDist.df,AcornInfo%>%select(Acorn,Group,TotalUse),by=c("ACornCategory"="Acorn"))
+
+```
+
+```{r}
+p<-mdsPowerDist.df%>%
+  ggplot(aes(x=Y1,y=Y2,color=Group,shape=Tariff))+
+  geom_point()+
+  scale_color_manual(values=c("#66FF33","#FF3333","#CC00CC"))+
+  labs(title="Principal Coordinates using pairwise distances of electricity consumption")
+  
+ggplotly(p)
+
+```
+
+```{r}
+#Total Use as Bubble Size
+p<-mdsPowerDist.df%>%
+  mutate(TotalUseSqrt=TotalUse^0.5,
+         TotalUse=round(TotalUse,4))%>%
+  ggplot(aes(x=Y1,y=Y2,color=Group,size=TotalUse,label=ACornCategory))+
+  geom_point(shape=1,fill="grey",aes(size=TotalUseSqrt))+
+  scale_size_continuous(trans="exp")
+
+ggplotly(p)
+mdsPowerDist$
+```
+
+Q2. Create a dendrogram using complete linkage. Plot the dendrogram, labeling the leaves with the category they represent. Cut the dendrogram so four groups are created–show this on the plot. Make a table of these four groups and the three aggregated socio economic groups, and a separate table of the dendrogram groups and electricity tariff types. Are the dendrogram groups associated with either the socio economic group or tariff? Do not perform a test, but summarize any trends in your tables.
+
+```{r}
+mod<-hclust(powerDist)
+plot(mod,hang=-1,xlab="Group",sub="",labels=as.factor(AcornInfo$Group))
+rect.hclust(mod,k=4)
+
+
+#Cut the dendrogram into k=4 groups
+table1<-table(cutree(mod,k=4),AcornInfo$Group)
+```
+
+```{r Association with Acorn Group}
+
+table1_melt<-table1%>%
+  as.data.frame()%>%
+  mutate(Dendrogram_Group =Var1,
+         ACornGroup = Var2)
+
+p<-table1_melt%>%
+  ggplot(aes(x=Dendrogram_Group,y=Freq,label=Freq))+
+  geom_bar(stat="Identity",aes(fill=ACornGroup))+
+  coord_flip()+
+  labs(title="ACorn group by Dendrogram Group")+
+  xlab("Dendrogram Group")+
+  ylab("Count")
+ggplotly(p)
+
+table2<-table(cutree(mod,k=4),AcornInfo$Tariff)
+```
+
+
+```{r Association with Tariff Group}
+table2_melt<-table2%>%
+  as.data.frame()%>%
+  mutate(Dendrogram_Group=Var1,
+         Tariff=Var2)
+
+p<-table2_melt%>%
+  ggplot(aes(x=Dendrogram_Group,y=Freq))+
+  geom_bar(stat="Identity",aes(fill=Tariff))+
+  coord_flip()+
+  labs(title="Tariff Group by Dendrogram Group")+
+  xlab("Dendrogram Group")+
+  ylab("Count")
+
+ggplotly(p)
+
+```
+
+```{r Visualise the Clusters}
+
+Clustered<-mdsPowerDist.df%>%
+  inner_join(data.frame(Dendrogram_Group=cutree(mod,k=4),
+                        Tariff_Group=names(cutree(mod,k=4))),
+             by=c("Tariff_Group"="Tariff_Group"))
+
+
+options(scipen = 999)
+p<-Clustered%>%
+  ggplot(aes(x=Y1,y=Y2))+
+  geom_point(aes(color=Group,shape=Tariff))+
+    scale_color_manual(values=c("#66FF33","#FF3333","#CC00CC"))+
+  geom_encircle(aes(group=as.factor(Dendrogram_Group)),color="red",expand=0.02)+
+  labs(title="Principal Coordinates with Hierarchical Clustering (Complete linkage, height 4)")
+
+p
+```
