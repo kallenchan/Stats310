@@ -4,23 +4,30 @@ library(MASS)
 library(tidyverse)
 library(plotly)
 library(ggalt)
-install.packages("vegan")
 library(vegan)
 ```
 
+```{r}
+#We have 34 'variables'
+#Multi-Dimensional Scaling
+#Reducing from 34 Dimensions to k=2 dimensions
+
+#Classical MultiDimensional Scaling - CMD or Metric MultiDimensional Scaling (MDS)
+
+mdsPowerDist<-cmdscale(powerDist,k=2,eig=TRUE)
+```
+
+
 ```{r Import Data}
 AcornInfo<-read_csv("AcornInfo-1.csv")
-
 comfortable<-read_csv("comfortable.csv")
 pd<-load("powerDist.RData")
-
-
 ```
 
 Q1. Create a metric multdimensional scaling. Plot using symbols/colors to represent Tariff and Group (the 3-level variable aggregating the acorn categories). Make a second plot showing total use as bubble size, using color to represent Group. Summarize any trends or interesting features in these two plots.
 
+
 ```{r Q1}
-?mMDS
 #Multi-Dimensional Scaling
 mdsPowerDist<-cmdscale(powerDist,k=2,eig=TRUE)
 
@@ -49,18 +56,27 @@ ggplotly(p)
 
 ```
 
-```{r}
+```{r Bubble Plot}
 #Total Use as Bubble Size
 p<-mdsPowerDist.df%>%
-  mutate(TotalUseSqrt=TotalUse^0.5,
-         TotalUse=round(TotalUse,4))%>%
+  mutate(TotalUse=round(TotalUse,4))%>%
   ggplot(aes(x=Y1,y=Y2,color=Group,size=TotalUse,label=ACornCategory))+
-  geom_point(shape=1,fill="grey",aes(size=TotalUseSqrt))+
-  scale_size_continuous(trans="exp")
+  geom_point(shape=1,fill="grey",aes(size=TotalUse))+
+  scale_size_continuous(range=c(10,40),trans="exp")+
+  labs(title="Bubble Plot")
 
 ggplotly(p)
-mdsPowerDist$
 ```
+```{r}
+colors=AcornInfo$Group
+colors[colors=="Affluent"]="Green"
+colors[colors=="Comfortable"]="Purple"
+colors[colors=="Adversity"]="Red"
+symbols(mdsPowerDist$points,circles=AcornInfo$TotalUse,fg=colors,
+        main="Principal Coordinates of pairwise distances by Group sized by Total Use")
+
+```
+
 
 Q2. Create a dendrogram using complete linkage. Plot the dendrogram, labeling the leaves with the category they represent. Cut the dendrogram so four groups are created–show this on the plot. Make a table of these four groups and the three aggregated socio economic groups, and a separate table of the dendrogram groups and electricity tariff types. Are the dendrogram groups associated with either the socio economic group or tariff? Do not perform a test, but summarize any trends in your tables.
 
