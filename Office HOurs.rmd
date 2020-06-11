@@ -1,0 +1,128 @@
+---
+title: "Assignment 4 STATS 302"
+author: "Melody Zhang 366925544"
+due date: "11 June, 2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r ,include=FALSE}
+library(s20x)
+library(MASS)
+library(vegan)
+library(tidyverse)
+```
+
+
+# Question 1 
+
+```{r}
+load("powerDist.RData")
+Acorn = read.csv("AcornInfo-1.csv")
+
+tariff = cmdscale(powerDist,eig=TRUE)
+plot(tariff$points)
+plot(tariff$points,col=Acorn$Group,pch=as.numeric(Acorn$Tariff))
+plot(tariff$points,col=Acorn$Tariff)
+legend("topleft",pch=rep(C("S","T"),3),col=rep(1:3,each=2),legend=c("Standard Adversity","Time of use Adversity","Standard Affluent","ToU affluent","Standard Comf","ToU Comf"))
+
+tariff$GOF ## goodness of fit number.
+## they are same always, can be reconstructed, very big, is Euclidean dist
+
+## need to do bubble plot (lab week 10)
+
+levels(Acorn$Group)
+weatherD = dist(scale(Acorn[,3:4]),method="euc")
+symbols(Acorn.mds$points,circles=butterflies$Altitude,xlab="non-metric axis 1", ylab="non-metric axis 2", main=paste("stress",round(butterflies.mds$stress,2)))
+legend("topleft",pch=1,pt.cex=2,legend="Radius proportional to Altitude")
+
+butterflies = read.table("Butterflies_R.txt",header = TRUE)
+weatherD = vegdist(scale(butterflies[,2:5]),method="euc")
+
+
+
+
+```
+
+# Question 2
+```{r}
+AcClustComplete <- hclust(acornD)
+plot(AcClustComplete, hang=-1, labels=acorn.df$Group,sub="",ylab="Euclidean Distance",main="Complete linkage clustering based on Euclidean Distance between z-scores",cex.main=0.9)
+rect.hclust(AcClustComplete,k=4)
+```
+```{r}
+table(cutree(acorn_clust,k=4),acorn$Group)
+table(cutree(acorn_clust,k=4),acorn$Tariff)
+```
+
+# Question 3
+```{r}
+comfort.df <- read.csv("comfortable.csv")
+
+adonis(comfort.df[,5:52]~comfort.df$TARIFF,method="euc")
+```
+
+
+# Question 4
+```{r}
+powerDist = load("powerDist.RData")
+data(powerDist)
+kmod = kmeans(comfort.df[,5:52],centers=2,nstart=10)
+names(kmod)
+
+## the"tot.withinss" can be used to look for an "elbow" as the number of clusters changes
+WSS = rep(NA,10)
+for (i in 2:11) {
+  WSS[i-1] = kmeans(comfort.df[,5:52],centers=i,nstart=10)$tot.withinss
+}
+
+plot(2:11,WSS,xlab="Number of Clusters")
+
+## We can also save the Between Group sum of squares and complete the Calinski-Harabasz index, if desired
+
+BSS = rep(NA,10)
+for (i in 2:11) {
+  BSS[i-1] = kmeans(comfort.df[,5:52], centers=i, nstart=10)$betweens
+}
+
+NminusK = nrow(comfort.df-c(2:11))
+Kminus1 = c(1:10)
+CH = BSS*NminusK/(WSS*Kminus1)
+plot(2:11,CH,xlab="Number of Clusters")
+
+
+par(mfrow=c(1,2))
+## plot the within-group sum of squares: elbow at 7th clusters
+plot(2:10,WSS,xlab="Number of Clusters",type="b",main="Within-group sum of squares")
+
+## plot the Calinski-Harabasz index: maximal index at the 2nd clusters
+plot(2:10,CH,xlab="Number of Clusters",type="b",ylab="C-H index",main="Calinski-Harabasz index")
+
+## Choose 2 clusters (from CH index)
+kmod2 = kmeans(comfort.df[,5:52],centers=2,nstart=10)
+table(kmod2$cluster,comfort.df$ACORN)
+table(kmod2$cluster,comfort.df$TARIFF)
+
+
+## Choose 6 clusters (from CH index)
+kmod6 = kmeans(comfort.df[,5:52],centers=6,nstart=10)
+table(kmod6$cluster,comfort.df$ACORN)
+tabke(kmod6$cluster,comfort.df$TARIFF)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
