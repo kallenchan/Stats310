@@ -7,15 +7,7 @@ library(ggalt)
 library(vegan)
 ```
 
-```{r}
-#We have 34 'variables'
-#Multi-Dimensional Scaling
-#Reducing from 34 Dimensions to k=2 dimensions
 
-#Classical MultiDimensional Scaling - CMD or Metric MultiDimensional Scaling (MDS)
-
-mdsPowerDist<-cmdscale(powerDist,k=2,eig=TRUE)
-```
 
 
 ```{r Import Data}
@@ -32,7 +24,7 @@ Q1. Create a metric multdimensional scaling. Plot using symbols/colors to repres
 mdsPowerDist<-cmdscale(powerDist,k=2,eig=TRUE)
 
 mdsPowerDist.df<-data.frame(mdsPowerDist$points)%>%
-                    select(Y1=X1,Y2=X2)
+                    dplyr::select(Y1=X1,Y2=X2)
 
 mdsPowerDist.df$Tariff_Group <- rownames(mdsPowerDist.df)
 
@@ -41,7 +33,7 @@ mdsPowerDist.df$Tariff<-rownames(mdsPowerDist.df)%>%word(2)
 mdsPowerDist.df$ACornCategory<-word(rownames(mdsPowerDist.df,1))
 
 #Join with AcornInfo
-mdsPowerDist.df<-inner_join(x=mdsPowerDist.df,AcornInfo%>%select(Acorn,Group,TotalUse),by=c("ACornCategory"="Acorn"))
+mdsPowerDist.df<-inner_join(x=mdsPowerDist.df,AcornInfo%>%dplyr::select(Acorn,Group,TotalUse),by=c("ACornCategory"="Acorn"))
 
 ```
 
@@ -148,3 +140,75 @@ p<-Clustered%>%
 
 p
 ```
+
+Q3 In the next two questions we will make a closer examination of the “comfortable” category. We have selected 640 households, 320 with the standard tariff and 320 with the time of use tariff. Note that the profiles (what we want to compare) are in columns 5 to 52. Read in this data from “comfortable.csv.” Do a permanova based on the euclidian distance. What are your conclusions?
+
+```{r}
+adonis(comfortable[,5:52]~comfortable$TARIFF,method="euc")
+```
+
+Q4 Perform k-means clustering of the profiles from the comfortable households. Make graphs of the within group sum of squares, and the C-H index. Select a number of clusters, referring to featrues of the plots to justify your choice. Create tables of the cluster memberships and the detailed acorn categories, and of the cluster memberships and tariff. Are there any associations? Assess qualitatively; a chi-squared test would be appropriate here, but you need not perform one. 
+
+```{r}
+WSS = rep(NA,10)
+for (i in 2:11) {
+  WSS[i-1] = kmeans(comfortable[,5:52],centers=i,nstart=10)$tot.withinss
+}
+
+plot(2:11,WSS,xlab="Number of Clusters")
+```
+
+````{r}
+BSS = rep(NA, 10)
+for (i in 2:11) {
+BSS[i-1] = kmeans(comfortable[, 5:52], centers = i, nstart = 10)$betweenss
+}
+````
+
+```{r Fit K = 2 Means Clustering}
+kmod=kmeans(comfortable[,5:52],centers=2,nstart=10)
+```
+
+```{r Tariff}
+table(comfortable$TARIFF,kmod$cluster)%>%
+  as.data.frame()%>%
+    dplyr::select(Tariff=Var1,ClusterGroup=Var2,Freq)%>%
+  ggplot(aes(x=ClusterGroup,y=Freq,fill=Tariff,label=Freq))+
+  geom_bar(stat="identity",position="fill")+
+  scale_y_continuous(labels=scales::percent)+
+  labs(title="Tariff Representation in Cluster Groups")
+```
+
+
+````{r ACorn}
+table(comfortable$ACORN,kmod$cluster)%>%
+  as.data.frame()%>%
+    dplyr::select(ACORN=Var1,ClusterGroup=Var2,Freq)%>%
+  ggplot(aes(x=ClusterGroup,y=Freq,fill=ACORN,label=Freq))+
+  geom_bar(stat="identity",position="fill")+
+  scale_y_continuous(labels=scales::percent)+
+  labs(title="ACorn Category Representation in Cluster Groups")
+``` 
+
+```{r}
+#Choosing 4 Clusters
+kmod4 = kmeans(comfortable[,5:52], centers = 4, nstart = 10)
+table(comfortable$ACORN, kmod4$cluster)%>%
+  as.data.frame()%>%
+    dplyr::select(ACORN=Var1,ClusterGroup=Var2,Freq)%>%
+  ggplot(aes(x=ClusterGroup,y=Freq,fill=ACORN,label=Freq))+
+  geom_bar(stat="identity",position="fill")+
+  scale_y_continuous(labels=scales::percent)+
+  labs(title="ACorn Category Representation in Cluster Groups")
+
+
+table(comfortable$TARIFF, kmod4$cluster)%>%
+  as.data.frame()%>%
+    dplyr::select(TARIFF=Var1,ClusterGroup=Var2,Freq)%>%
+  ggplot(aes(x=ClusterGroup,y=Freq,fill=TARIFF,label=Freq))+
+  geom_bar(stat="identity",position="fill")+
+  scale_y_continuous(labels=scales::percent)+
+  labs(title="Tariff Representation in Cluster Groups")
+```
+
+
